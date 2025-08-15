@@ -51,38 +51,6 @@ export default function SnakeGame({ userData, onGameOver }: SnakeGameProps) {
     return snake.some(segment => segment.x === x && segment.y === y);
   }, [snake]);
 
-  // Lógica del Bot IA
-  const aiMove = useCallback(() => {
-    if (!aiMode || gameOver || isPaused) return;
-
-    const head = snake[0];
-    const target = food;
-    
-    // Algoritmo de pathfinding: encontrar ruta a la comida
-    const path = findPathToFood(head, target);
-    
-    if (path && path.length > 1) {
-      // Tomar el siguiente paso en la ruta
-      const nextStep = path[1];
-      const direction = {
-        x: nextStep.x - head.x,
-        y: nextStep.y - head.y
-      };
-      
-      // Verificar que el movimiento sea válido
-      if (!willCollide(head.x + direction.x, head.y + direction.y)) {
-        setDirection(direction);
-        return;
-      }
-    }
-    
-    // Si no hay ruta, usar estrategia de escape
-    const escapeMove = findEscapeMove(head);
-    if (escapeMove) {
-      setDirection(escapeMove);
-    }
-  }, [aiMode, gameOver, isPaused, snake, food, willCollide]);
-
   // Algoritmo de búsqueda de ruta (BFS)
   const findPathToFood = useCallback((start: Position, target: Position) => {
     const queue: Array<{ pos: Position; path: Position[] }> = [{ pos: start, path: [start] }];
@@ -118,33 +86,6 @@ export default function SnakeGame({ userData, onGameOver }: SnakeGameProps) {
     return null; // No hay ruta disponible
   }, [willCollide]);
 
-  // Estrategia de escape cuando no hay ruta a la comida
-  const findEscapeMove = useCallback((head: Position) => {
-    const directions = [
-      { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }
-    ];
-    
-    // Encontrar el movimiento que nos da más espacio
-    let bestMove = null;
-    let bestScore = -Infinity;
-    
-    for (const dir of directions) {
-      const newX = head.x + dir.x;
-      const newY = head.y + dir.y;
-      
-      if (willCollide(newX, newY)) continue;
-      
-      // Calcular cuánto espacio nos da este movimiento
-      const space = calculateAvailableSpace(newX, newY);
-      if (space > bestScore) {
-        bestScore = space;
-        bestMove = dir;
-      }
-    }
-    
-    return bestMove;
-  }, [willCollide]);
-
   // Calcular espacio disponible desde una posición
   const calculateAvailableSpace = useCallback((x: number, y: number) => {
     const visited = new Set<string>();
@@ -176,6 +117,65 @@ export default function SnakeGame({ userData, onGameOver }: SnakeGameProps) {
     
     return space;
   }, [willCollide]);
+
+  // Estrategia de escape cuando no hay ruta a la comida
+  const findEscapeMove = useCallback((head: Position) => {
+    const directions = [
+      { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }
+    ];
+    
+    // Encontrar el movimiento que nos da más espacio
+    let bestMove = null;
+    let bestScore = -Infinity;
+    
+    for (const dir of directions) {
+      const newX = head.x + dir.x;
+      const newY = head.y + dir.y;
+      
+      if (willCollide(newX, newY)) continue;
+      
+      // Calcular cuánto espacio nos da este movimiento
+      const space = calculateAvailableSpace(newX, newY);
+      if (space > bestScore) {
+        bestScore = space;
+        bestMove = dir;
+      }
+    }
+    
+    return bestMove;
+  }, [willCollide, calculateAvailableSpace]);
+
+  // Lógica del Bot IA
+  const aiMove = useCallback(() => {
+    if (!aiMode || gameOver || isPaused) return;
+
+    const head = snake[0];
+    const target = food;
+    
+    // Algoritmo de pathfinding: encontrar ruta a la comida
+    const path = findPathToFood(head, target);
+    
+    if (path && path.length > 1) {
+      // Tomar el siguiente paso en la ruta
+      const nextStep = path[1];
+      const direction = {
+        x: nextStep.x - head.x,
+        y: nextStep.y - head.y
+      };
+      
+      // Verificar que el movimiento sea válido
+      if (!willCollide(head.x + direction.x, head.y + direction.y)) {
+        setDirection(direction);
+        return;
+      }
+    }
+    
+    // Si no hay ruta, usar estrategia de escape
+    const escapeMove = findEscapeMove(head);
+    if (escapeMove) {
+      setDirection(escapeMove);
+    }
+  }, [aiMode, gameOver, isPaused, snake, food, willCollide, findPathToFood, findEscapeMove]);
 
   // Verificar colisión con paredes o cuerpo
   const checkCollision = useCallback((head: Position) => {
@@ -214,7 +214,7 @@ export default function SnakeGame({ userData, onGameOver }: SnakeGameProps) {
       newSnake.unshift(head);
       return newSnake;
     });
-  }, [direction, food, checkCollision, gameOver, isPaused, score, generateFood]);
+  }, [direction, food, checkCollision, gameOver, isPaused, generateFood]);
 
   // Efecto para manejar game over
   useEffect(() => {
